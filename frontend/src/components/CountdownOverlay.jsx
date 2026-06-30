@@ -30,7 +30,7 @@ export default function CountdownOverlay({ countdown, phase }) {
   }
 
   if (phase === "countdown" && countdown !== null) {
-    const isUrgent = countdown === 1;
+    const isUrgent = countdown <= 3;
 
     return (
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">

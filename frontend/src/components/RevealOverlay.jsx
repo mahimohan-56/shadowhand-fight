@@ -7,7 +7,7 @@ const MOVE_DATA = {
   none:     { label: "Void",          emoji: "❌", color: "#6b7280", glow: "rgba(107,114,128,0.3)" },
 };
 
-export default function RevealOverlay({ playerMove, aiMove, roundWinner, damage, playerUsername, aiCharacter, aiName }) {
+export default function RevealOverlay({ playerMove, aiMove, roundWinner, damage, playerUsername, aiCharacter, aiName, phase, onNextRound }) {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -21,46 +21,60 @@ export default function RevealOverlay({ playerMove, aiMove, roundWinner, damage,
   const pm = MOVE_DATA[playerMove] ?? MOVE_DATA.none;
   const am = MOVE_DATA[aiMove] ?? MOVE_DATA.none;
 
-  let bannerText = "DRAW";
-  let bannerColor = "rgba(168,162,158,0.92)";
-  let bannerBorder = "rgba(168,162,158,0.3)";
-
-  if (roundWinner === "player") {
-    bannerText = "ROUND WON";
-    bannerColor = "rgba(22,101,52,0.95)";
-    bannerBorder = "rgba(74,222,128,0.4)";
-  } else if (roundWinner === "ai") {
-    bannerText = "ROUND LOST";
-    bannerColor = "rgba(127,29,29,0.95)";
-    bannerBorder = "rgba(239,68,68,0.4)";
-  }
+  // Minimalist result config
+  const result = roundWinner === "player"
+    ? { label: "VICTORY",  sub: "ROUND COMPLETE", accentColor: "#4ade80", accentRgb: "74,222,128" }
+    : roundWinner === "ai"
+    ? { label: "DEFEATED", sub: "ROUND COMPLETE", accentColor: "#ef4444", accentRgb: "239,68,68" }
+    : { label: "DRAW",     sub: "NO DAMAGE",      accentColor: "#78716c", accentRgb: "120,113,108" };
 
   return (
     <div
-      className="absolute inset-0 z-40 flex flex-col items-center justify-center p-4 transition-all duration-500"
+      className="absolute inset-0 z-40 flex flex-col items-center justify-center p-4"
       style={{
-        background: step >= 1 ? "rgba(3,3,5,0.85)" : "rgba(3,3,5,0)",
-        backdropFilter: step >= 1 ? "blur(8px)" : "blur(0px)",
+        background: step >= 1 ? "rgba(3,3,5,0.92)" : "rgba(3,3,5,0)",
+        transition: "background 0.35s ease",
       }}
     >
-      {/* Upper banner text area */}
+      {/* ── Minimal result header ── */}
       <div
-        className="w-full max-w-md text-center py-2.5 sm:py-3 rounded mb-4 border transition-all duration-500"
+        className="w-full max-w-md mb-5 transition-all duration-500 flex flex-col items-center gap-1"
         style={{
-          background: bannerColor,
-          borderColor: bannerBorder,
-          transform: step >= 1 ? "scale(1) translateY(0)" : "scale(0.9) translateY(-15px)",
+          transform: step >= 1 ? "translateY(0)" : "translateY(-12px)",
           opacity: step >= 1 ? 1 : 0,
-          boxShadow: "0 20px 40px rgba(0,0,0,0.8)",
         }}
       >
-        <h2 className="text-xl sm:text-2xl font-black tracking-widest text-white uppercase leading-none">
-          {bannerText}
+        {/* Thin accent bar above */}
+        <div
+          className="w-12 h-px mb-2"
+          style={{ background: result.accentColor, boxShadow: `0 0 8px rgba(${result.accentRgb},0.8)` }}
+        />
+
+        {/* Main result word */}
+        <h2
+          className="text-2xl sm:text-3xl font-black tracking-[0.2em] uppercase leading-none"
+          style={{ color: result.accentColor, textShadow: `0 0 20px rgba(${result.accentRgb},0.4)` }}
+        >
+          {result.label}
         </h2>
+
+        {/* Sub-label */}
+        <p className="text-[9px] font-mono tracking-[0.35em] uppercase text-stone-600 mt-0.5">
+          {result.sub}
+        </p>
+
+        {/* Damage chip — appears on step 2 */}
         {damage > 0 && step >= 2 && (
-          <p className="text-[10px] font-mono tracking-[0.25em] text-stone-200 mt-1 uppercase animate-pulse">
-            💥 dealt {damage} damage 💥
-          </p>
+          <div
+            className="mt-2 px-3 py-0.5 text-[9px] font-mono uppercase tracking-[0.25em] transition-all duration-300"
+            style={{
+              color: result.accentColor,
+              border: `1px solid rgba(${result.accentRgb},0.3)`,
+              background: `rgba(${result.accentRgb},0.06)`,
+            }}
+          >
+            − {damage} hp
+          </div>
         )}
       </div>
 
@@ -90,6 +104,21 @@ export default function RevealOverlay({ playerMove, aiMove, roundWinner, damage,
           portraitAccent={aiCharacter?.accent}
         />
       </div>
+
+      {/* Next Round button — only shown when server is waiting for player */}
+      {phase === "waiting_next" && step >= 3 && (
+        <button
+          onClick={onNextRound}
+          className="mt-5 px-8 py-3 rounded font-black uppercase tracking-widest text-sm text-white transition-all duration-200 active:scale-95"
+          style={{
+            background: "linear-gradient(135deg, rgba(176,0,0,0.9) 0%, rgba(220,38,38,0.85) 100%)",
+            border: "1px solid rgba(239,68,68,0.5)",
+            boxShadow: "0 0 24px rgba(176,0,0,0.5), 0 4px 16px rgba(0,0,0,0.6)",
+          }}
+        >
+          ⚔️ Next Round
+        </button>
+      )}
     </div>
   );
 }
@@ -118,7 +147,6 @@ function MoveColumn({ show, side, name, move, showTag, tag, tagColor, portrait, 
         style={{
           background: "rgba(6,6,14,0.85)",
           border: `1px solid ${move.color}55`,
-          boxShadow: `0 0 30px ${move.glow}, inset 0 0 16px ${move.glow}10`,
         }}
       >
         {/* WIN/LOSS tag */}

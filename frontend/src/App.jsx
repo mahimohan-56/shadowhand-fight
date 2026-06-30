@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import { getSocket, destroySocket } from "./utils/socket.js";
 import Lobby from "./components/Lobby.jsx";
 import CharacterSelect from "./components/CharacterSelect.jsx";
@@ -27,12 +27,19 @@ export default function App() {
   const [username,  setUsername]  = useState("");
   const [character, setCharacter] = useState(null);
   const [gameState, setGameState] = useState(DEFAULT_GAME);
+  // Countdown lives in its own state so timer_tick never re-renders
+  // the heavy game components (WebcamPanel, AIPanel, etc.)
+  const [countdown, setCountdown] = useState(null);
   const [gameOver,  setGameOver]  = useState(null);
   const [connError, setConnError] = useState(null);
 
-  // gestureRef.current = currentGestureRef from useMediaPipe
-  // gestureRef.current.current = live gesture string, zero React lag
   const gestureRef = useRef(null);
+
+  // Merge countdown back in for GameBoard so it only receives one prop object
+  const gameStateWithCountdown = useMemo(
+    () => ({ ...gameState, countdown }),
+    [gameState, countdown]
+  );
 
   const setupSocket = useCallback((uname, char) => {
     const socket = getSocket();
@@ -40,8 +47,6 @@ export default function App() {
 
     socket.on("connect", () => {
       setConnError(null);
-      // UPDATED: Now passes the complete character profile object as 'opponent'
-      // to match what server.js reads for dynamic AI behavior configurations.
       socket.emit("start_ai_match", { username: uname, opponent: char });
     });
 
@@ -58,6 +63,7 @@ export default function App() {
         playerHp,
         aiHp,
       });
+      setCountdown(null);
       setScreen(SCREENS.GAME);
     });
 
@@ -73,13 +79,14 @@ export default function App() {
       }));
     });
 
+    // Only update countdown — no gameState re-render
     socket.on("timer_tick", ({ countdown }) => {
-      setGameState(prev => ({ ...prev, countdown }));
+      setCountdown(countdown);
     });
 
     socket.on("lock_move", () => {
       setGameState(prev => ({ ...prev, phase: "grace" }));
-      // Read gesture via ref — avoids stale closure entirely
+      setCountdown(null);
       const move = gestureRef.current?.current ?? "none";
       socket.emit("submit_move", { move });
     });
@@ -95,6 +102,10 @@ export default function App() {
         playerHp,
         aiHp,
       }));
+    });
+
+    socket.on("waiting_next_round", ({ round }) => {
+      setGameState(prev => ({ ...prev, phase: "waiting_next", round }));
     });
 
     socket.on("game_over", ({ winner }) => {
@@ -119,9 +130,15 @@ export default function App() {
   function handlePlayAgain() {
     destroySocket();
     setGameState(DEFAULT_GAME);
+    setCountdown(null);
     setGameOver(null);
     setCharacter(null);
     setScreen(SCREENS.LOBBY);
+  }
+
+  function handleNextRound() {
+    const socket = getSocket();
+    socket.emit("next_round");
   }
 
   return (
@@ -133,11 +150,11 @@ export default function App() {
         <CharacterSelect username={username} onSelect={handleCharacterSelect} connError={connError} />
       )}
       {screen === SCREENS.GAME && (
-        <GameBoard gameState={gameState} gestureRef={gestureRef} />
+        <GameBoard gameState={gameStateWithCountdown} gestureRef={gestureRef} onNextRound={handleNextRound} />
       )}
       {screen === SCREENS.OVER && (
         <>
-          <GameBoard gameState={gameState} gestureRef={gestureRef} />
+          <GameBoard gameState={gameStateWithCountdown} gestureRef={gestureRef} onNextRound={handleNextRound} />
           <GameOver
             winner={gameOver?.winner}
             playerUsername={username}

@@ -4,17 +4,11 @@ import { Server } from "socket.io";
 import cors from "cors";
 
 const app = express();
-
-// Lock CORS to the deployed frontend origin in production.
-// Set FRONTEND_URL in your hosting env vars (e.g. Render's dashboard).
-// Falls back to "*" only when no env var is set (local dev convenience).
-const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "*";
-
-app.use(cors({ origin: ALLOWED_ORIGIN }));
+app.use(cors());
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: ALLOWED_ORIGIN, methods: ["GET", "POST"] },
+  cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
 const PORT = process.env.PORT || 3001;
@@ -94,7 +88,7 @@ function createMatch(socketId, username, difficulty) {
   };
 }
 
-function startRound(socketId, startingFrom = 3) {
+function startRound(socketId, startingFrom = 5) {
   const match = activeMatches.get(socketId);
   if (!match || match.phase === "ended") return;
 
@@ -110,11 +104,12 @@ function startRound(socketId, startingFrom = 3) {
   match.countdownTimer = setInterval(() => {
     countdown--;
     match.savedCountdown = countdown;
-    io.to(socketId).emit("timer_tick", { countdown });
     if (countdown <= 0) {
       clearInterval(match.countdownTimer);
       match.countdownTimer = null;
       lockMoves(socketId);
+    } else {
+      io.to(socketId).emit("timer_tick", { countdown });
     }
   }, 1000);
 }
@@ -178,8 +173,9 @@ function evaluateRound(socketId) {
     }, 2500);
   } else {
     match.round++;
-    match.phase = "idle";
-    setTimeout(() => startRound(socketId), 2500);
+    match.phase = "waiting_next";
+    // Wait for client to emit "next_round" before starting the next round
+    io.to(socketId).emit("waiting_next_round", { round: match.round });
   }
 }
 
@@ -219,6 +215,12 @@ io.on("connection", (socket) => {
     clearTimeout(match.graceTimer);
     match.graceTimer = null;
     evaluateRound(socket.id);
+  });
+
+  socket.on("next_round", () => {
+    const match = activeMatches.get(socket.id);
+    if (!match || match.phase !== "waiting_next") return;
+    startRound(socket.id);
   });
 
   socket.on("disconnect", () => {

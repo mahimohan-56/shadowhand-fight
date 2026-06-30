@@ -49,15 +49,11 @@ export default function WebcamPanel({ gestureRef, phase, cameraEnabled = true })
         <div className="absolute inset-0 pointer-events-none border border-red-500/5 z-20 rounded-md m-px" />
         <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-red-500/5 to-transparent pointer-events-none z-10" />
 
-        {/* State Indicators */}
+        {/* State Indicators — subtle border flash only, no full-overlay repaint */}
         {isLock && (
-          <div className="absolute inset-0 bg-red-950/20 border border-red-500/20 z-20 animate-pulse flex items-center justify-center pointer-events-none">
-            <div className="bg-stone-950/90 px-3 py-1.5 rounded border border-red-500/30 shadow-xl">
-              <p className="text-[10px] font-mono font-bold tracking-[0.3em] text-red-400 uppercase">
-                LOCKING GESTURE
-              </p>
-            </div>
-          </div>
+          <div className="absolute inset-x-0 bottom-0 h-0.5 z-20 pointer-events-none"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(239,68,68,0.8), transparent)" }}
+          />
         )}
 
         {/* Loading fallbacks */}
@@ -79,20 +75,48 @@ export default function WebcamPanel({ gestureRef, phase, cameraEnabled = true })
           <canvas ref={canvasRef} />
         </div>
 
-        {/* Gesture badge */}
+        {/* Gesture badge — game HUD style */}
         {isLive && (
-          <div
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 rounded"
-            style={{
-              background: "rgba(3,3,5,0.88)",
-              border: `1px solid ${gData.color}45`,
-              boxShadow: `0 0 10px ${gData.color}18`,
-            }}
-          >
-            <span className="text-xs">{gData.emoji}</span>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-200">
-              {gData.label}
-            </span>
+          <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pb-3">
+            <div
+              className="flex items-center gap-0 overflow-hidden"
+              style={{
+                background: "rgba(4,4,8,0.92)",
+                border: `1px solid ${gData.color}30`,
+                boxShadow: `0 0 18px ${gData.color}12, inset 0 1px 0 rgba(255,255,255,0.04)`,
+              }}
+            >
+              {/* Colour accent slab */}
+              <div
+                className="w-1 self-stretch shrink-0"
+                style={{ background: `linear-gradient(180deg, ${gData.color}cc, ${gData.color}44)` }}
+              />
+
+              {/* Emoji */}
+              <span className="text-sm px-2.5 py-1.5 leading-none select-none">{gData.emoji}</span>
+
+              {/* Divider */}
+              <div className="w-px self-stretch" style={{ background: `${gData.color}20` }} />
+
+              {/* Label */}
+              <span
+                className="px-2.5 py-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.22em] leading-none"
+                style={{ color: gesture === "none" ? "#4b5563" : "#e2ddd8" }}
+              >
+                {gData.label}
+              </span>
+
+              {/* Status dot */}
+              <div className="pr-2.5 flex items-center">
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{
+                    background: gesture === "none" ? "#374151" : gData.color,
+                    boxShadow: gesture === "none" ? "none" : `0 0 6px ${gData.color}`,
+                  }}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -1,11 +1,11 @@
-import React from "react";
+import React, { memo } from "react";
 import HPBar from "./HPBar.jsx";
 import WebcamPanel from "./WebcamPanel.jsx";
 import AIPanel from "./AIPanel.jsx";
 import CountdownOverlay from "./CountdownOverlay.jsx";
 import RevealOverlay from "./RevealOverlay.jsx";
 
-export default function GameBoard({ gameState, gestureRef }) {
+const GameBoard = memo(function GameBoard({ gameState, gestureRef, onNextRound }) {
   const {
     playerUsername, aiName, aiCharacter,
     playerHp, aiHp,
@@ -13,7 +13,7 @@ export default function GameBoard({ gameState, gestureRef }) {
     playerMove, aiMove, roundWinner, damage,
   } = gameState;
 
-  const showReveal = phase === "result" && playerMove && aiMove;
+  const showReveal = (phase === "result" || phase === "waiting_next") && playerMove && aiMove;
 
   return (
     <div
@@ -87,6 +87,8 @@ export default function GameBoard({ gameState, gestureRef }) {
             playerUsername={playerUsername}
             aiCharacter={aiCharacter}
             aiName={aiName}
+            phase={phase}
+            onNextRound={onNextRound}
           />
         )}
       </main>
@@ -99,4 +101,6 @@ export default function GameBoard({ gameState, gestureRef }) {
 </footer>
     </div>
   );
-}
+});
+
+export default GameBoard;
