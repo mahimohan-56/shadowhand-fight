@@ -194,7 +194,6 @@ io.on("connection", (socket) => {
     const match = createMatch(socket.id, username || "Warrior", difficultyRating);
     activeMatches.set(socket.id, match);
 
-    // FIX: Send match.playerHp and match.aiHp instead of a static 100
     socket.emit("match_found", {
       yourUsername: match.username,
       aiName:       opponent?.name || "Shadow AI",
@@ -202,7 +201,9 @@ io.on("connection", (socket) => {
       aiHp:         match.aiHp,
     });
 
-    setTimeout(() => startRound(socket.id), 1500);
+    // Do NOT auto-start round — wait for player_ready from client.
+    // This prevents cold-start races where the round fires before
+    // the user has granted camera permission and clicked Start Match.
   });
 
   socket.on("submit_move", ({ move }) => {
@@ -215,6 +216,13 @@ io.on("connection", (socket) => {
     clearTimeout(match.graceTimer);
     match.graceTimer = null;
     evaluateRound(socket.id);
+  });
+
+  // Player clicked "Start Match" — now it's safe to begin round 1
+  socket.on("player_ready", () => {
+    const match = activeMatches.get(socket.id);
+    if (!match || match.phase !== "idle") return;
+    startRound(socket.id);
   });
 
   socket.on("next_round", () => {
