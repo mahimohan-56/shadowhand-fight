@@ -8,12 +8,12 @@ const GESTURE_DATA = {
   none:     { label: "No Hand",       emoji: "–",  color: "#6b7280" },
 };
 
-export default function WebcamPanel({ gestureRef, phase, cameraEnabled = true }) {
+export default function WebcamPanel({ gestureRef, phase, cameraEnabled = true, initialStream = null, lastGoodGestureRef = null }) {
   const videoRef  = useRef(null);
   const canvasRef = useRef(null);
 
   const { modelReady, modelError, cameraError, cameraReady, currentGestureRef } =
-    useMediaPipe(videoRef, canvasRef, { enabled: cameraEnabled });
+    useMediaPipe(videoRef, canvasRef, { enabled: cameraEnabled, initialStream, lastGoodGestureRef });
 
   useEffect(() => {
     if (gestureRef) gestureRef.current = currentGestureRef;

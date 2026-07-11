@@ -5,7 +5,7 @@ import AIPanel from "./AIPanel.jsx";
 import CountdownOverlay from "./CountdownOverlay.jsx";
 import RevealOverlay from "./RevealOverlay.jsx";
 
-const GameBoard = memo(function GameBoard({ gameState, gestureRef, onNextRound }) {
+const GameBoard = memo(function GameBoard({ gameState, gestureRef, onNextRound, initialStream, lastGoodGestureRef }) {
   const {
     playerUsername, aiName, aiCharacter,
     playerHp, aiHp,
@@ -52,7 +52,12 @@ const GameBoard = memo(function GameBoard({ gameState, gestureRef, onNextRound }
 
         {/* Player webcam */}
         <div className="flex-1 min-h-0 min-w-0 h-full flex flex-col">
-          <WebcamPanel gestureRef={gestureRef} phase={phase} />
+          <WebcamPanel
+            gestureRef={gestureRef}
+            phase={phase}
+            initialStream={initialStream}
+            lastGoodGestureRef={lastGoodGestureRef}
+          />
         </div>
 
         {/* Center VS + countdown */}
