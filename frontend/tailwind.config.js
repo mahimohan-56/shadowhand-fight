@@ -6,6 +6,8 @@ export default {
       fontFamily: {
         sans: ["'Roboto'", "sans-serif"],
         mono: ["'Roboto Mono'", "monospace"],
+        anton: ["'Anton'", "sans-serif"],
+        
       },
       colors: {
         blood: {

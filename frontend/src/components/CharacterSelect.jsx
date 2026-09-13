@@ -1,6 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export const CHARACTERS = [
+  {
+    id: "brick",
+    name: "Brick",
+    image: "/characters/brick.png",
+    weapon: "Heavy Knuckles",
+    style: "Brutal Brawler",
+    desc: "A straightforward fighter who relies on powerful punches and simple, hard-hitting attacks.",
+    accent: "#4ade80",
+    difficulty: "Easy",
+    startingHp: 100,
+},
+  {
+    id: "wasp",
+    name: "Wasp",
+    image: "/characters/wasp.jpg",
+    weapon: "Naginata",
+    style: "Swift Duelist",
+    desc: "Fast, precise, and relentless. She overwhelms her opponents with rapid strikes and deadly reach.",
+    accent: "#4ade80",
+    difficulty: "Easy",
+    startingHp: 100,
+},
   {
     id: "may",
     name: "May",
@@ -10,6 +32,7 @@ export const CHARACTERS = [
     desc: "Swift, relentless, and deadly. Her twin daggers strike before you can react.",
     accent: "#4ade80",
     difficulty: "Easy",
+    startingHp: 100,
   },
   {
     id: "shark",
@@ -20,7 +43,19 @@ export const CHARACTERS = [
     desc: "A ruthless underground champion whose crushing punches and relentless pressure dominate the arena.",
     accent: "#fbbf24",
     difficulty: "Medium",
+    startingHp: 110,
   },
+  {
+    id: "man-fists",
+    name: "Man Fists",
+    image: "/characters/man-fists.png",
+    weapon: "Fists",
+    style: "Hand-to-Hand Brawler",
+    desc: "A fierce close-range fighter who relies on raw strength, speed, and devastating punches.",
+    accent: "#fb923c",
+    difficulty: "Medium",
+    startingHp: 110,
+},
   {
     id: "butcher",
     name: "Butcher",
@@ -30,7 +65,19 @@ export const CHARACTERS = [
     desc: "A towering demon who crushes opponents with devastating power and relentless aggression.",
     accent: "#fbbf24",
     difficulty: "Medium",
+    startingHp: 110,
   },
+  {
+    id: "outcast",
+    name: "Outcast",
+    image: "/characters/outcast.png",
+    weapon: "Twin Blades",
+    style: "Relentless Warrior",
+    desc: "A ruthless fighter who combines speed and power to crush opponents with relentless attacks.",
+    accent: "#ef4444",
+    difficulty: "Hard",
+    startingHp: 150,
+},
   {
     id: "crane",
     name: "Crane",
@@ -40,6 +87,7 @@ export const CHARACTERS = [
     desc: "Graceful yet ruthless. His naginata controls the battlefield with sweeping precision.",
     accent: "#ef4444",
     difficulty: "Hard",
+    startingHp: 150,
   },
   {
     id: "vortex",
@@ -50,7 +98,41 @@ export const CHARACTERS = [
     desc: "Every strike is calculated. His flawless blade work and lethal shadow abilities punish even the smallest mistake.",
     accent: "#6a5cff",
     difficulty: "Boss",
+    startingHp: 200,
   },
+  {
+    id: "ritual-guardian",
+    name: "Ritual Guardian III",
+    image: "/characters/ritual-guardian.png",
+    weapon: "Glaive",
+    style: "Defensive Warrior",
+    desc: "A relentless guardian who combines powerful strikes with an unbreakable defense.",
+    accent: "#6a5cff",
+    difficulty: "Boss",
+    startingHp: 200,
+},
+{
+    id: "talaikh",
+    name: "Talaikh",
+    image: "/characters/talaikh.png",
+    weapon: "Shield",
+    style: "Avian Guardian",
+    desc: "A legendary warrior from a dying world. He fights with an unyielding shield and devastating beams of sunlight.",
+    accent: "#a855f7",
+    difficulty: "Legendary",
+    startingHp: 300,
+},
+{
+    id: "guru",
+    name: "Guru",
+    image: "/characters/guru-shades.png",
+    weapon: "Thunder Hammers",
+    style: "Corrupted Juggernaut",
+    desc: "A ruthless master of the Family who crushes his enemies with devastating hammer strikes and dark Shadow powers.",
+    accent: "#a855f7",
+    difficulty: "Legendary",
+    startingHp: 300,
+},
 ];
 
 const DIFFICULTY_COLOR = {
@@ -58,40 +140,62 @@ const DIFFICULTY_COLOR = {
   Medium: "#fbbf24",
   Hard: "#ef4444",
   Boss: "#6a5cff",
+  Legendary: "#a855f7",
 };
+
+// Keep this in sync with CameraConsent's TRANSITION_MS so the fade-out here
+// and the fade-in there feel like one continuous motion.
+const TRANSITION_MS = 340;
 
 export default function CharacterSelect({ username, onSelect, connError }) {
   const [hovered, setHovered] = useState(null);
   const [selected, setSelected] = useState(null);
   const [confirming, setConfirming] = useState(false);
 
+  // Entrance fade-in on mount, exit fade-out before handing off to CameraConsent.
+  const [mounted, setMounted] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   const activeChar = hovered ?? selected ?? CHARACTERS[0];
 
   function handleConfirm() {
-    if (!selected || confirming) return;
+    if (!selected || confirming || leaving) return;
     setConfirming(true);
-    onSelect(selected);
+    setLeaving(true);
+    setTimeout(() => onSelect(selected), TRANSITION_MS);
   }
+
+  const visible = mounted && !leaving;
 
   return (
     <div
       className="relative flex flex-col h-[100dvh] w-screen overflow-hidden"
-      style={{ background: "radial-gradient(ellipse 100% 80% at 50% 100%, #150505 0%, #030305 55%)" }}
+      style={{
+        background: "radial-gradient(ellipse 100% 80% at 50% 100%, #150505 0%, #030305 55%)",
+        opacity: visible ? 1 : 0,
+        transform: leaving ? "scale(1.03)" : "scale(1)",
+        transition: `opacity ${TRANSITION_MS}ms cubic-bezier(0.22,1,0.36,1), transform ${TRANSITION_MS}ms cubic-bezier(0.22,1,0.36,1)`,
+        pointerEvents: leaving ? "none" : "auto",
+      }}
     >
       {/* Top header — stacks vertically on the smallest screens so long
           text doesn't get squeezed into a single illegible row */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-0 px-4 sm:px-8 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-white/5 shrink-0">
         <div>
-          <p className="text-[10px] sm:text-xs font-mono text-amber-600 uppercase tracking-[0.2em] sm:tracking-[0.25em]">
+          <p className="text-[10px] sm:text-xs font-bold text-amber-600 uppercase tracking-[0.2em] sm:tracking-[0.25em]">
             Welcome, {username}
           </p>
-          <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight mt-0.5">
-            Choose Your Opponent
-          </h1>
-        </div>
-        <div className="text-left sm:text-right">
-          <p className="text-[10px] sm:text-xs font-mono text-amber-400 uppercase tracking-widest font-semibold">ShadowHand Fight</p>
-          <p className="text-[10px] sm:text-xs font-mono text-stone-300 mt-0.5 opacity-90">Select an enemy to battle</p>
+         <h1
+  className="text-lg sm:text-2xl font-black text-white tracking-tight mt-0.5"
+  style={{ fontFamily: "'Anton', sans-serif" }}
+>
+  Choose Your Opponent
+</h1>
         </div>
       </div>
 
@@ -111,10 +215,10 @@ export default function CharacterSelect({ username, onSelect, connError }) {
         {/* Character picker —
             Mobile: horizontal scroll-snap row of compact cards.
             Desktop: vertical list, same cards as before. */}
-        <div
-          className="flex lg:flex-col gap-2.5 sm:gap-3 lg:w-64 shrink-0 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden pb-2 lg:pb-0 lg:pr-1 -mx-3 px-3 lg:mx-0 lg:px-0"
-          style={{ scrollSnapType: "x mandatory" }}
-        >
+       <div
+  className="char-scroll flex lg:flex-col gap-2.5 sm:gap-3 lg:w-64 shrink-0 lg:min-h-0 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden pb-2 lg:pb-0 lg:pr-1 -mx-3 px-3 lg:mx-0 lg:px-0"
+  style={{ scrollSnapType: "x mandatory" }}
+>
           {CHARACTERS.map(char => {
             const isSelected = selected?.id === char.id;
             const isHov = hovered?.id === char.id;
@@ -242,7 +346,7 @@ export default function CharacterSelect({ username, onSelect, connError }) {
               <div>
                 <div className="flex justify-between text-[10px] font-mono text-stone-600 mb-1.5 uppercase tracking-wider">
                   <span>Starting HP</span>
-                  <span>100 / 100</span>
+                  <span>{activeChar.startingHp} / {activeChar.startingHp}</span>
                 </div>
                 <div className="h-2 rounded-none bg-white/5 overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div
@@ -258,7 +362,7 @@ export default function CharacterSelect({ username, onSelect, connError }) {
             <div className="flex flex-col gap-2 pb-1 lg:pb-0">
               {!selected && (
                 <p className="text-xs font-mono text-stone-600 text-center">
-                  ← Select an enemy to challenge
+
                 </p>
               )}
               <button

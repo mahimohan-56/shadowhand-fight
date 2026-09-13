@@ -79,7 +79,7 @@ export default function App() {
       }
     });
 
-    // Server confirmed match. Round does NOT start — waits for player_ready.
+    // Server confirmed match, waits for player to get ready.
     socket.on("match_found", ({ yourUsername, aiName, playerHp, aiHp }) => {
       setGameState({
         ...DEFAULT_GAME,
@@ -240,7 +240,7 @@ export default function App() {
   );
 }
 
-// ─── Connecting screen ────────────────────────────────────────────────────────
+//Connecting screen
 function ConnectingScreen({ character, message }) {
   return (
     <div
@@ -279,7 +279,7 @@ function ConnectingScreen({ character, message }) {
   );
 }
 
-// ─── Start Match screen ───────────────────────────────────────────────────────
+//Start Match screen
 function StartMatchScreen({ character, gameState, onStart }) {
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
