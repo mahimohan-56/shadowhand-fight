@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo } from "react";
 import { getSocket, destroySocket } from "./utils/socket.js";
+import { preloadHandLandmarker } from "./utils/mediapipeLoader.js";
 import Lobby from "./components/Lobby.jsx";
 import CharacterSelect from "./components/CharacterSelect.jsx";
 import CameraConsent from "./components/CameraConsent.jsx";
@@ -40,6 +41,7 @@ export default function App() {
   const [gameOver,  setGameOver]  = useState(null);
   const [connError, setConnError] = useState(null);
   const [wakeMsg,   setWakeMsg]   = useState("Connecting to server…");
+  const [modelReady, setModelReady] = useState(false);
 
   const gestureRef         = useRef(null);
   const attemptRef         = useRef(0);
@@ -162,6 +164,13 @@ export default function App() {
   // We store it so WebcamPanel can reuse it — no double prompt.
   function handleConsentAccept(stream) {
     cameraStreamRef.current = stream;
+    // Start loading + GPU-warming the hand-tracking model right now, while
+    // the player is looking at the Start Match screen — instead of waiting
+    // until GameBoard mounts, which used to race the server's round-1
+    // countdown and cause a cold-start "VOID" on the very first round.
+    preloadHandLandmarker()
+      .then(() => setModelReady(true))
+      .catch(() => setModelReady(true)); // let useMediaPipe surface the real error later; don't hard-block forever
     setScreen(SCREENS.READY);
   }
 
@@ -208,7 +217,7 @@ export default function App() {
         <CameraConsent onAccept={handleConsentAccept} onDecline={handleConsentDecline} />
       )}
       {screen === SCREENS.READY && (
-        <StartMatchScreen character={character} gameState={gameState} onStart={handleStartMatch} />
+        <StartMatchScreen character={character} gameState={gameState} modelReady={modelReady} onStart={handleStartMatch} />
       )}
       {screen === SCREENS.GAME && (
         <GameBoard
@@ -280,7 +289,7 @@ function ConnectingScreen({ character, message }) {
 }
 
 //Start Match screen
-function StartMatchScreen({ character, gameState, onStart }) {
+function StartMatchScreen({ character, gameState, modelReady, onStart }) {
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
       <div className="absolute inset-0"
@@ -331,17 +340,27 @@ function StartMatchScreen({ character, gameState, onStart }) {
 
         <button
           onClick={onStart}
-          className="w-full py-4 rounded font-bold text-white text-sm uppercase tracking-[0.2em] transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
+          disabled={!modelReady}
+          className="w-full py-4 rounded font-bold text-white text-sm uppercase tracking-[0.2em] transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           style={{
             background: character ? `linear-gradient(135deg, ${character.accent}cc, ${character.accent}88)` : "linear-gradient(135deg, #b00000, #7a0000)",
             border: character ? `1px solid ${character.accent}60` : "1px solid rgba(224,32,32,0.5)",
             boxShadow: character ? `0 0 30px ${character.accent}25` : "0 0 20px rgba(224,32,32,0.2)",
           }}
         >
-          ⚔ Start Match
+          {modelReady ? (
+            "⚔ Start Match"
+          ) : (
+            <span className="inline-flex items-center justify-center gap-2">
+              <span className="w-3 h-3 rounded-full border-2 border-t-white border-white/30 animate-spin" />
+              Loading AI model…
+            </span>
+          )}
         </button>
 
-        <p className="text-stone-600 text-[10px] font-mono">Camera is ready · Round starts on your signal</p>
+        <p className="text-stone-600 text-[10px] font-mono">
+          {modelReady ? "Camera is ready · Round starts on your signal" : "Preparing hand-tracking, one moment…"}
+        </p>
 
         <div className="absolute bottom-0 left-0 right-0 h-px"
           style={{ background: character ? `linear-gradient(90deg, transparent, ${character.accent}35, transparent)` : "linear-gradient(90deg, transparent, rgba(224,32,32,0.2), transparent)" }} />

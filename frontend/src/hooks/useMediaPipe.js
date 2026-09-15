@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { detectGesture, drawLandmarks } from "../utils/gestureDetection.js";
-
-const WASM_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
+import { preloadHandLandmarker } from "../utils/mediapipeLoader.js";
 
 /**
  * useMediaPipe — local, on-device hand tracking.
@@ -43,37 +42,30 @@ export function useMediaPipe(videoRef, canvasRef, {
   }, [videoRef]);
 
   // ── Load model ───────────────────────────────────────────────────────────
+  // Uses the shared singleton from mediapipeLoader.js. If App.jsx already
+  // called preloadHandLandmarker() during the READY screen (see StartMatchScreen
+  // gating), this resolves near-instantly and already GPU-warmed — fixing the
+  // round-1 "VOID" cold-start bug where the model was still loading when the
+  // server's round-1 countdown hit zero.
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
 
-    async function loadModel() {
-      try {
-        const { HandLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
-        const resolver = await FilesetResolver.forVisionTasks(WASM_CDN);
-        const hl = await HandLandmarker.createFromOptions(resolver, {
-          baseOptions: {
-            modelAssetPath:
-              "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-            delegate: "GPU",
-          },
-          runningMode: "VIDEO",
-          numHands: 1,
-        });
+    preloadHandLandmarker()
+      .then(hl => {
         if (!cancelled) {
           handLandmarkerRef.current = hl;
           setModelReady(true);
         }
-      } catch (err) {
+      })
+      .catch(err => {
         if (!cancelled) setModelError("Failed to load hand-tracking model: " + err.message);
-      }
-    }
-    loadModel();
+      });
 
     return () => {
       cancelled = true;
-      handLandmarkerRef.current?.close?.();
-      handLandmarkerRef.current = null;
+      // Don't close it here — it's a shared singleton reused across
+      // mounts/rounds, not owned by this component instance.
     };
   }, [enabled]);
 
